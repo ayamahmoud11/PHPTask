@@ -60,4 +60,6 @@ jobs:
     
     - name: Execute Tests
       env:
-       
+        REDIS_HOST: 127.0.0.1
+      run: |
+        php artisan test
