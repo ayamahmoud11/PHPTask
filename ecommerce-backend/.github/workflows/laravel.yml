@@ -1,0 +1,63 @@
+name: Laravel CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: laravel
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, mysql, redis, dom, fileinfo
+        coverage: none
+    
+    - name: Install Dependencies
+      run: |
+        composer install --prefer-dist --no-interaction
+        cp .env.example .env
+        php artisan key:generate
+    
+    - name: Prepare Database
+      run: |
+        mysql -h 127.0.0.1 -u laravel -ppassword laravel -e "CREATE DATABASE IF NOT EXISTS laravel;"
+    
+    - name: Run Migrations
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: laravel
+        DB_USERNAME: laravel
+        DB_PASSWORD: password
+      run: |
+        php artisan migrate --force
+    
+    - name: Execute Tests
+      env:
+       
